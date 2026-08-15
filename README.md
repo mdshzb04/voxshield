@@ -11,34 +11,85 @@ Scam calls work because nobody is listening for manipulation *as it happens*. Nu
 ## How It Works
 
 ```mermaid
-flowchart LR
-    Citizen["Citizen on a call"]
+flowchart TB
+    Citizen(["Citizen on a call"])
+    Monitor(["Deployment health monitor"])
 
-    subgraph Browser["VoxShield browser experience"]
-        Mic["Live mic\nWeb Speech API"]
-        Upload["Call audio upload"]
-        Demo["Scam demo"]
-        Transcript["Transcript buffer"]
-        Results["Risk score, evidence,\nAttack Chain, and timeline"]
-        Intervention["Safe response, TTS,\nreport packet, and Replay Attack"]
+    subgraph Public["Public internet"]
+        Citizen
+        Monitor
     end
 
-    subgraph API["Stateless Next.js API routes"]
-        Transcribe["/api/transcribe\nOpenAI Whisper"]
-        Detect["/api/detect"]
-        LLM["OpenAI or Groq\nsignal extraction only"]
-        Policy["Deterministic policy engine\nevidence validation + fixed scoring"]
-        Guard["API safeguards\n20 requests/minute/IP · 10-second timeout · /api/health"]
+    subgraph Browser["Citizen device · VoxShield browser UI"]
+        direction TB
+        UI["Call safety companion<br/>phone UI, evidence, and timeline"]
+        Mic["Live microphone<br/>Web Speech API"]
+        Upload["Recorded call upload"]
+        Demo["Scam demo script"]
+        Session["Session-only transcript and result state"]
+        Actions["In-call intervention<br/>safe response · TTS · report · Replay Attack"]
+
+        UI --> Mic
+        UI --> Upload
+        UI --> Demo
+        Mic -->|"recognized speech"| Session
+        Demo --> Session
+        Session --> UI
+        UI --> Actions
     end
 
-    Citizen --> Mic
-    Mic --> Transcript
-    Upload --> Transcribe --> Transcript
-    Demo --> Transcript
-    Transcript --> Detect --> LLM --> Detect
-    Detect --> Policy --> Results --> Intervention
-    Guard -. protects .-> Transcribe
-    Guard -. protects .-> Detect
+    subgraph App["VoxShield deployment · Next.js"]
+        direction TB
+        Guard["API guard<br/>20 requests/minute/IP · 10-second timeout"]
+        Transcribe["POST /api/transcribe"]
+        Detect["POST /api/detect"]
+        Policy["Deterministic policy engine<br/>verbatim-evidence validation<br/>fixed scoring and risk band"]
+        Health["GET /api/health"]
+
+        Guard --> Transcribe
+        Guard --> Detect
+        Detect --> Policy
+    end
+
+    subgraph Providers["AI provider APIs"]
+        Whisper["OpenAI Whisper<br/>audio transcription"]
+        Extractor["OpenAI or Groq<br/>signal extraction only"]
+    end
+
+    subgraph Privacy["Privacy boundary"]
+        NoStore["No VoxShield database or object storage<br/>raw audio and transcripts are not persisted"]
+    end
+
+    Citizen -->|"HTTPS"| UI
+    Upload -->|"multipart audio"| Transcribe
+    Transcribe -->|"audio"| Whisper
+    Whisper -->|"transcript"| Transcribe
+    Transcribe -->|"transcript"| Session
+    Session -->|"JSON transcript"| Detect
+    Detect -->|"analysis prompt"| Extractor
+    Extractor -->|"raw signals + evidence"| Detect
+    Policy -->|"score, band, validated signals"| Session
+    Monitor -->|"GET /api/health"| Health
+
+    classDef public fill:#f8fafc,stroke:#64748b,color:#0f172a,stroke-width:1.5px;
+    classDef client fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e,stroke-width:1.5px;
+    classDef app fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px;
+    classDef provider fill:#fff7ed,stroke:#ea580c,color:#7c2d12,stroke-width:1.5px;
+    classDef output fill:#ecfdf5,stroke:#059669,color:#065f46,stroke-width:1.5px;
+    classDef privacy fill:#fef2f2,stroke:#e11d48,color:#881337,stroke-width:1.5px;
+
+    class Citizen,Monitor public;
+    class UI,Mic,Upload,Demo,Session client;
+    class Actions output;
+    class Guard,Transcribe,Detect,Policy,Health app;
+    class Whisper,Extractor provider;
+    class NoStore privacy;
+
+    style Public fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px;
+    style Browser fill:#f8fafc,stroke:#7dd3fc,stroke-width:1.5px;
+    style App fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px;
+    style Providers fill:#f8fafc,stroke:#fdba74,stroke-width:1.5px;
+    style Privacy fill:#fffafa,stroke:#fda4af,stroke-width:1.5px;
 ```
 
 **Separation of concerns (real in code, not just marketing):**
