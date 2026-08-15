@@ -10,18 +10,40 @@ Scam calls work because nobody is listening for manipulation *as it happens*. Nu
 
 ## How It Works
 
-```
-Mic (Web Speech API) → Live transcript buffer → Groq (signal extraction only)
-                                                          ↓
-                                              Deterministic policy engine
-                                              (fixed point scoring)
-                                                          ↓
-                                    Risk score + timeline + safe spoken response
+```mermaid
+flowchart LR
+    Citizen["Citizen on a call"]
+
+    subgraph Browser["VoxShield browser experience"]
+        Mic["Live mic\nWeb Speech API"]
+        Upload["Call audio upload"]
+        Demo["Scam demo"]
+        Transcript["Transcript buffer"]
+        Results["Risk score, evidence,\nAttack Chain, and timeline"]
+        Intervention["Safe response, TTS,\nreport packet, and Replay Attack"]
+    end
+
+    subgraph API["Stateless Next.js API routes"]
+        Transcribe["/api/transcribe\nOpenAI Whisper"]
+        Detect["/api/detect"]
+        LLM["OpenAI or Groq\nsignal extraction only"]
+        Policy["Deterministic policy engine\nevidence validation + fixed scoring"]
+        Guard["API safeguards\n20 requests/minute/IP · 10-second timeout · /api/health"]
+    end
+
+    Citizen --> Mic
+    Mic --> Transcript
+    Upload --> Transcribe --> Transcript
+    Demo --> Transcript
+    Transcript --> Detect --> LLM --> Detect
+    Detect --> Policy --> Results --> Intervention
+    Guard -. protects .-> Transcribe
+    Guard -. protects .-> Detect
 ```
 
 **Separation of concerns (real in code, not just marketing):**
 
-1. **Groq LLM** — identifies potential patterns and returns verbatim evidence substrings. It never assigns scores or makes security decisions.
+1. **LLM extractor (OpenAI or Groq)** — identifies potential patterns and returns verbatim evidence substrings. It never assigns scores or makes security decisions.
 2. **Policy engine** (`lib/policy.ts`) — validates evidence against the transcript, applies fixed point values, caps at 100, and determines risk bands.
 
 ### Signal Types & Scoring
@@ -40,8 +62,8 @@ Mic (Web Speech API) → Live transcript buffer → Groq (signal extraction only
 
 ## Privacy
 
-- Audio is **not stored** — processing happens in-browser via Web Speech API
-- Transcripts are sent to Groq for pattern extraction only during the session
+- Live microphone audio is **not stored** — browser speech capture stays in the session
+- Uploaded call audio is sent to Whisper for transcription; transcripts are sent to the configured OpenAI or Groq extractor only during the session
 - Nothing is persisted to a database or disk
 
 ## Run Locally
