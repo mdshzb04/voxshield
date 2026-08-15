@@ -3,25 +3,159 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --vs-bg: #f8fafc;
+  --vs-surface: #ffffff;
+  --vs-surface-raised: #ffffff;
+  --vs-surface-callout: #f0fdf4;
+  --vs-border: #e2e8f0;
+  --vs-border-subtle: #cbd5e1;
+  --vs-crimson: #e11d48;
+  --vs-crimson-muted: rgba(225, 29, 72, 0.12);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--vs-bg);
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: #0f172a;
+  background: #ffffff;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+.vs-nav-link {
+  position: relative;
+  display: inline-flex;
+  height: 3.5rem;
+  align-items: center;
+  color: #64748b;
+  font-weight: 500;
+  transition: color 160ms ease;
+}
+
+.vs-nav-link::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  content: "";
+  background: #0f172a;
+  opacity: 0;
+  transform: scaleX(0.45);
+  transform-origin: center;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.vs-nav-link:hover {
+  color: #0f172a;
+}
+
+.vs-nav-link:hover::after,
+.vs-nav-link:focus-visible::after {
+  opacity: 0.35;
+  transform: scaleX(0.72);
+}
+
+.vs-nav-link:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.28);
+  outline-offset: -4px;
+}
+
+body:not(:has(#evidence:target)) .vs-nav-link--call,
+body:has(#evidence:target) .vs-nav-link--evidence {
+  color: #0f172a;
+}
+
+body:not(:has(#evidence:target)) .vs-nav-link--call::after,
+body:has(#evidence:target) .vs-nav-link--evidence::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes scorePop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.45s ease-out both;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.35s ease-out both;
+}
+
+.animate-score-pop {
+  animation: scorePop 0.35s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@layer components {
+  .vs-btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 active:scale-[0.99];
+  }
+
+  .vs-btn-primary {
+    @apply vs-btn border border-slate-900 bg-slate-900 text-white hover:bg-slate-800;
+  }
+
+  .vs-btn-danger {
+    @apply vs-btn border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100;
+  }
+
+  .vs-btn-secondary {
+    @apply vs-btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;
+  }
+
+  .vs-btn-ghost {
+    @apply vs-btn border border-transparent bg-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-900;
+  }
+
+  .phone-action {
+    @apply flex h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-md text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40;
+  }
+
 }

@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VoxShield
 
-## Getting Started
+Real-time voice security agent that listens to live conversations, transcribes speech in the browser, detects potential social-engineering patterns, and calculates a deterministic risk score — all on one screen.
 
-First, run the development server:
+Built for the Independence Day AI Hackathon (Theme: Security).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## The Problem
+
+Scam calls work because nobody is listening for manipulation *as it happens*. Number-blocking tools only help before you pick up. Once you're on the call, urgency, fake authority, and OTP requests pile up faster than most people can evaluate them.
+
+## How It Works
+
+```
+Mic (Web Speech API) → Live transcript buffer → Groq (signal extraction only)
+                                                          ↓
+                                              Deterministic policy engine
+                                              (fixed point scoring)
+                                                          ↓
+                                    Risk score + timeline + safe spoken response
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Separation of concerns (real in code, not just marketing):**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Groq LLM** — identifies potential patterns and returns verbatim evidence substrings. It never assigns scores or makes security decisions.
+2. **Policy engine** (`lib/policy.ts`) — validates evidence against the transcript, applies fixed point values, caps at 100, and determines risk bands.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Signal Types & Scoring
 
-## Learn More
+| Pattern | Points |
+|---------|--------|
+| OTP / credential request | +35 |
+| Payment pressure (UPI, gift cards, crypto) | +25 |
+| Remote access request (AnyDesk, TeamViewer) | +20 |
+| Urgency language | +15 |
+| Authority impersonation | +15 |
+| Suspicious link / download | +15 |
+| Isolation language | +10 |
 
-To learn more about Next.js, take a look at the following resources:
+**Risk bands:** 0–24 LOW · 25–49 CAUTION · 50–74 HIGH · 75–100 CRITICAL
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Privacy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Audio is **not stored** — processing happens in-browser via Web Speech API
+- Transcripts are sent to Groq for pattern extraction only during the session
+- Nothing is persisted to a database or disk
 
-## Deploy on Vercel
+## Run Locally
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+cd voxshield
+cp .env.local.example .env.local
+# Add your free Groq API key to .env.local
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in **Chrome** (Web Speech API required).
+
+### Demo Options
+
+1. **Live mic** — click "Start Listening" and speak a scam scenario
+2. **Demo script** — click "Load Demo Script" for a hardcoded banking-scam transcript through the same pipeline
+
+## Stack
+
+- Next.js 14 + Tailwind CSS
+- Browser Web Speech API (transcription)
+- Groq API (signal extraction)
+- Browser SpeechSynthesis (safe response playback)
+
+## Framing
+
+VoxShield detects **potential social-engineering patterns**, not certainty that someone is a scammer. The deterministic policy engine makes the security decision; the LLM only extracts evidence.
